@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  body {
+    @apply bg-dark-950 text-white;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+  
+  .royaltix-gradient {
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 50%, #6b21a8 100%);
+  }
+  
+  .crown-gradient {
+    background: linear-gradient(135deg, #facc15 0%, #eab308 50%, #ca8a04 100%);
+  }
+  
+  .glow-border {
+    @apply border border-royaltix-500/30 shadow-lg shadow-royaltix-500/20;
+  }
+  
+  .btn-primary {
+    @apply bg-royaltix-600 hover:bg-royaltix-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-royaltix-500/25;
+  }
+  
+  .btn-secondary {
+    @apply bg-dark-800 hover:bg-dark-700 text-white font-semibold py-3 px-6 rounded-xl border border-dark-600 transition-all duration-300 transform hover:scale-105;
+  }
+  
+  .input-field {
+    @apply bg-dark-800 border border-dark-600 text-white placeholder-dark-400 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-royaltix-500 focus:border-transparent transition-all duration-300;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:transform hover:scale-105 hover:shadow-xl hover:shadow-royaltix-500/20;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-royaltix-400 to-crown-400 bg-clip-text text-transparent;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-dark-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-royaltix-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-royaltix-500;
+}
+
+/* Loading animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
