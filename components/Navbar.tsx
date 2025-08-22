@@ -36,11 +36,17 @@ export function Navbar() {
             <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors">
               Dashboard
             </Link>
+            <Link href="/analytics" className="text-gray-300 hover:text-white transition-colors">
+              Analytics
+            </Link>
             <Link href="/tickets" className="text-gray-300 hover:text-white transition-colors">
               My Tickets
             </Link>
             <Link href="/market" className="text-gray-300 hover:text-white transition-colors">
               Marketplace
+            </Link>
+            <Link href="/admin" className="text-gray-300 hover:text-white transition-colors">
+              Admin
             </Link>
           </div>
 
@@ -104,6 +110,13 @@ export function Navbar() {
                 Dashboard
               </Link>
               <Link 
+                href="/analytics" 
+                className="block text-gray-300 hover:text-white transition-colors px-4"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Analytics
+              </Link>
+              <Link 
                 href="/tickets" 
                 className="block text-gray-300 hover:text-white transition-colors px-4"
                 onClick={() => setIsMenuOpen(false)}
@@ -116,6 +129,13 @@ export function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Marketplace
+              </Link>
+              <Link 
+                href="/admin" 
+                className="block text-gray-300 hover:text-white transition-colors px-4"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Admin
               </Link>
               
               <div className="px-4 pt-4 border-t border-white/10">
