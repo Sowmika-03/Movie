@@ -69,10 +69,33 @@ export function TicketsProvider({ children }: { children: React.ReactNode }) {
   const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>([])
   const [loading, setLoading] = useState(false)
 
+  // Load tickets from localStorage on startup
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('royaltix_tickets')
+      if (stored) {
+        const parsedTickets = JSON.parse(stored)
+        setTickets(parsedTickets)
+        console.log('Loaded tickets from localStorage:', parsedTickets.length)
+      }
+    } catch (error) {
+      console.error('Error loading tickets from localStorage:', error)
+    }
+  }, [])
+
+  // Save tickets to localStorage whenever tickets change
+  useEffect(() => {
+    try {
+      localStorage.setItem('royaltix_tickets', JSON.stringify(tickets))
+      console.log('Saved tickets to localStorage:', tickets.length)
+    } catch (error) {
+      console.error('Error saving tickets to localStorage:', error)
+    }
+  }, [tickets])
+
   // Fetch user tickets from blockchain
   const refreshTickets = useCallback(async () => {
     if (!isConnected || !account) {
-      setTickets([])
       return
     }
 
@@ -97,10 +120,22 @@ export function TicketsProvider({ children }: { children: React.ReactNode }) {
         canResell: ticket.resale_count < 2 && !ticket.is_used, // Assuming max 2 resales
       }))
 
-      setTickets(formattedTickets)
+      // Merge with local tickets (blockchain tickets take precedence)
+      setTickets(prev => {
+        const merged = [...formattedTickets]
+        // Add local tickets that aren't on blockchain yet
+        prev.forEach(localTicket => {
+          if (!formattedTickets.find(bt => bt.id === localTicket.id)) {
+            merged.push(localTicket)
+          }
+        })
+        return merged
+      })
+      
+      console.log('Refreshed tickets from blockchain:', formattedTickets.length)
     } catch (error) {
-      console.error('Error fetching tickets:', error)
-      setTickets([])
+      console.error('Error fetching tickets from blockchain:', error)
+      // Keep local tickets if blockchain fetch fails
     } finally {
       setLoading(false)
     }
@@ -138,23 +173,42 @@ export function TicketsProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      if (!txHash) {
-        // If no txHash provided, execute blockchain transaction
-        const creatorAddress = show.creator || account // Fallback for demo
-        const payload = buildMintTicketPayload(creatorAddress, parseInt(show.id), seatId)
-        const result = await signAndSubmitTransaction({ payload })
-        txHash = result.hash
+      // Create ticket locally for immediate display
+      const newTicket: TicketItem = {
+        id: `${show.id}-${Date.now()}`,
+        showId: show.id,
+        seatId: seatId,
+        movie: show.movie,
+        theater: show.theater,
+        showtime: show.showtime,
+        pricePaid: show.price,
+        owner: account,
+        purchasedAt: new Date().toISOString(),
+        txHash: txHash,
+        resaleCount: 0,
+        isUsed: false,
+        creator: show.creator || account,
+        canResell: true,
       }
 
-      // Refresh tickets after purchase
-      await refreshTickets()
+      // Add to local storage immediately
+      setTickets(prev => [newTicket, ...prev])
       
-      return { success: true }
+      console.log('Ticket created locally:', newTicket)
+      
+      // Also try to refresh from blockchain (but don't block on this)
+      try {
+        await refreshTickets()
+      } catch (refreshError) {
+        console.log('Blockchain refresh failed, using local ticket:', refreshError)
+      }
+      
+      return { success: true, ticket: newTicket }
     } catch (error) {
-      console.error('Error purchasing ticket:', error)
-      return { success: false, error: 'Failed to purchase ticket. Please try again.' }
+      console.error('Error creating ticket:', error)
+      return { success: false, error: 'Failed to create ticket. Please try again.' }
     }
-  }, [account, isConnected, signAndSubmitTransaction, refreshTickets])
+  }, [account, isConnected, refreshTickets])
 
   // List ticket for resale
   const listForResale = useCallback(async (ticketId: string, price: number) => {

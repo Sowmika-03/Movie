@@ -46,42 +46,74 @@ export default function MarketPage() {
   }
 
   const handlePrimaryPurchase = async (show: typeof sampleShows[number]) => {
+    // Check wallet connection first
+    if (!isConnected || !account) {
+      alert('Please connect your Petra wallet first!')
+      return
+    }
+
+    // Test wallet functionality
+    try {
+      const anyWindow = window as any
+      const petra = anyWindow.aptos || anyWindow.petra
+      if (!petra) {
+        alert('🔴 Petra wallet not detected!\n\nPlease:\n1. Install Petra wallet extension\n2. Refresh this page\n3. Try again')
+        return
+      }
+    } catch (error) {
+      alert('🔴 Wallet connection issue. Please refresh page and reconnect.')
+      return
+    }
+
     // Generate a seat ID (in real app, user would select seat)
     const seatId = `S${Math.floor(Math.random() * 10) + 1}-R${Math.floor(Math.random() * 20) + 1}-C${Math.floor(Math.random() * 15) + 1}`
     
-    let txHash: string | undefined
-    if (isConnected && account) {
-      try {
-        if (isValidModuleAddress) {
-          const payload = {
-            type: 'entry_function_payload',
-            function: `${moduleAddress}::tickets::mint`,
-            type_arguments: [],
-            arguments: [account, parseInt(show.id), seatId], // Using account as creator for demo
-          }
-          const res = await signAndSubmitTransaction({ payload })
-          txHash = res.hash
+    try {
+      alert(`🎫 Purchasing ticket for ${show.movie}\nSeat: ${seatId}\nPrice: ₹${show.price}\n\nPetra wallet will now open for approval...`)
+      
+      // Create a real transaction that will trigger Petra popup
+      const payload = {
+        type: 'entry_function_payload',
+        function: '0x1::coin::transfer',
+        type_arguments: ['0x1::aptos_coin::AptosCoin'],
+        arguments: [account, (show.price * 100000000).toString()], // Convert to Octas (self-transfer for demo)
+      }
+
+      console.log('Sending transaction to Petra...', payload)
+      
+      // This will trigger Petra wallet popup for approval
+      const res = await signAndSubmitTransaction(payload)
+      console.log('✅ Transaction approved:', res)
+      
+      if (res.hash) {
+        // Create ticket after successful blockchain transaction
+        const result = await purchaseTicket({
+          ...show,
+          creator: account, // Using account as creator for demo
+          royalty_percentage: 2,
+          max_resale_hops: 2
+        }, seatId, res.hash)
+        
+        if (result.success) {
+          alert(`🎉 SUCCESS! Ticket purchased!\n\n🎫 Movie: ${show.movie}\n🪑 Seat: ${seatId}\n💰 Price: ₹${show.price}\n🔗 Tx: ${res.hash.slice(0, 20)}...\n\n✅ Check "My Tickets" page to see your ticket!`)
         } else {
-          const ledger = await getLedgerInfo()
-          txHash = `ledger-${ledger.chain_id}-${Date.now()}`
+          alert(`⚠️ Payment succeeded but ticket creation failed: ${result.error}\n\nTransaction: ${res.hash}`)
         }
-      } catch (e) {
-        console.error('Blockchain transaction failed:', e)
+      }
+    } catch (error: any) {
+      console.error('Transaction failed:', error)
+      
+      // Show specific error messages
+      if (error.message?.includes('User rejected')) {
+        alert('❌ Transaction cancelled\n\nYou rejected the transaction in Petra wallet.')
+      } else if (error.message?.includes('Insufficient funds')) {
+        alert('❌ Insufficient balance\n\nYou need more APT in your Petra wallet.\n\nGet testnet APT from: https://aptoslabs.com/testnet-faucet')
+      } else if (error.message?.includes('not found')) {
+        alert('❌ Petra wallet not found\n\nPlease:\n1. Install Petra wallet\n2. Refresh page\n3. Connect wallet')
+      } else {
+        alert(`❌ Transaction failed\n\nError: ${error.message || 'Unknown error'}\n\nPlease try again or check your wallet.`)
       }
     }
-
-    const result = await purchaseTicket({
-      ...show,
-      creator: account, // Using account as creator for demo
-      royalty_percentage: 2,
-      max_resale_hops: 2
-    }, seatId, txHash)
-    
-    if (!result.success) {
-      alert(result.error)
-      return
-    }
-    alert('Ticket purchased! Check My Tickets page.')
   }
 
   const handleResalePurchase = async (listing: any) => {

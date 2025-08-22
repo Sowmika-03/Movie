@@ -20,37 +20,91 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const init = async () => {
       try {
         const anyWindow = window as any
-        const petra = anyWindow.aptos
+        const petra = anyWindow.aptos || anyWindow.petra
         if (petra && await petra.isConnected()) {
           const info = await petra.account()
           setAccount(info?.address ?? null)
-          setIsConnected(true)
+          setIsConnected(!!info?.address)
+          console.log('Wallet auto-connected:', info?.address)
         }
-      } catch {}
+      } catch (error) {
+        console.log('No wallet auto-connection:', error)
+      }
     }
     init()
   }, [])
 
   const connect = async () => {
-    const anyWindow = window as any
-    if (!anyWindow.aptos) throw new Error('Petra wallet not found')
-    const res = await anyWindow.aptos.connect()
-    setAccount(res?.address ?? null)
-    setIsConnected(true)
+    try {
+      const anyWindow = window as any
+      const petra = anyWindow.aptos || anyWindow.petra
+      
+      if (!petra) {
+        alert('🔴 Please install Petra Wallet extension first!\n\nGo to: https://petra.app')
+        throw new Error('Petra wallet not found')
+      }
+
+      console.log('Attempting to connect wallet...')
+      const res = await petra.connect()
+      console.log('Wallet connection result:', res)
+      
+      if (res?.address) {
+        setAccount(res.address)
+        setIsConnected(true)
+        alert(`✅ Wallet connected successfully!\nAddress: ${res.address.slice(0, 10)}...`)
+      } else {
+        throw new Error('Failed to get wallet address')
+      }
+    } catch (error: any) {
+      console.error('Wallet connection failed:', error)
+      alert(`❌ Wallet connection failed: ${error.message}`)
+      throw error
+    }
   }
 
   const disconnect = async () => {
-    const anyWindow = window as any
-    if (anyWindow.aptos?.disconnect) await anyWindow.aptos.disconnect()
-    setAccount(null)
-    setIsConnected(false)
+    try {
+      const anyWindow = window as any
+      const petra = anyWindow.aptos || anyWindow.petra
+      if (petra?.disconnect) {
+        await petra.disconnect()
+      }
+      setAccount(null)
+      setIsConnected(false)
+      console.log('Wallet disconnected')
+    } catch (error) {
+      console.error('Disconnect error:', error)
+    }
   }
 
   const signAndSubmitTransaction = async (tx: any) => {
-    const anyWindow = window as any
-    if (!anyWindow.aptos) throw new Error('Petra wallet not found')
-    const res = await anyWindow.aptos.signAndSubmitTransaction(tx)
-    return { hash: res?.hash }
+    try {
+      const anyWindow = window as any
+      const petra = anyWindow.aptos || anyWindow.petra
+      
+      if (!petra) {
+        throw new Error('Petra wallet not found')
+      }
+
+      if (!isConnected || !account) {
+        throw new Error('Wallet not connected')
+      }
+
+      console.log('Submitting transaction:', tx)
+      
+      // This should trigger Petra popup for user approval
+      const res = await petra.signAndSubmitTransaction(tx)
+      console.log('Transaction submitted:', res)
+      
+      if (!res?.hash) {
+        throw new Error('Transaction failed - no hash returned')
+      }
+
+      return { hash: res.hash }
+    } catch (error: any) {
+      console.error('Transaction error:', error)
+      throw error
+    }
   }
 
   const value = useMemo<WalletContextType>(() => ({
